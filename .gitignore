@@ -1,0 +1,6 @@
+volbot
+config.py
+exchange
+
+*.swp
+__pycache__
