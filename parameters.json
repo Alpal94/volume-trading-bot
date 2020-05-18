@@ -1,7 +1,1 @@
-{
-    "minTrade":"50",
-    "maxTrade":"100",
-    "minWaitTimeMS":"500",
-    "maxWaitTimeMS":"1500",
-    "pair":"SKYM/USDT"
-}
+{"minTrade":"50","maxTrade":"100","minWaitTimeMS":"500","maxWaitTimeMS":"1500"}

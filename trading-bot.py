@@ -18,12 +18,12 @@ minTrade = int(parameters['minTrade'])
 maxTrade = int(parameters['maxTrade'])
 minWaitTimeMS = int(parameters['minWaitTimeMS'])
 maxWaitTimeMS = int(parameters['maxWaitTimeMS'])
-symbol = parameters['pair']
+pair = "SKYM/USDT"
 
 tradeNumber = 0
 def sellAndBuyOrders(bids, asks, exchangeAmount):
     global tradeNumber
-    lastPrice = client.market_trades(symbol)['data'][0][1]
+    lastPrice = client.market_trades(pair)['data'][0][1]
     bidPrice = float(bids[0][0])
     askPrice = float(asks[0][0])
 
@@ -42,12 +42,12 @@ def sellAndBuyOrders(bids, asks, exchangeAmount):
     print(price)
     if tradeNumber % 2 is 0:
         # Sell first then buy
-        print( client.order_place(symbol, sell, price, exchangeAmount, limitOrder, None, None) )
-        print( client.order_place(symbol, buy, price, exchangeAmount, limitOrder, None, None) )
+        print( client.order_place(pair, sell, price, exchangeAmount, limitOrder, None, None) )
+        print( client.order_place(pair, buy, price, exchangeAmount, limitOrder, None, None) )
     else:
         # Buy first then sell
-        print( client.order_place(symbol, buy, price, exchangeAmount, limitOrder, None, None) )
-        print( client.order_place(symbol, sell, price, exchangeAmount, limitOrder, None, None) )
+        print( client.order_place(pair, buy, price, exchangeAmount, limitOrder, None, None) )
+        print( client.order_place(pair, sell, price, exchangeAmount, limitOrder, None, None) )
 
     tradeNumber = tradeNumber + 1
 
@@ -64,7 +64,7 @@ def successfulTrade(orderbook):
 
 def runTrades():
     while(True):
-        orderBook = client.order_book(symbol, 5)['data']
+        orderBook = client.order_book(pair, 5)['data']
         successfulTrade(orderBook)
         time.sleep(random.randint(minWaitTimeMS, maxWaitTimeMS) / 1000)
 
