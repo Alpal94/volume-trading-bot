@@ -10,11 +10,15 @@ import config
 
 client = ExchangeClient(config.apiid, config.secret)
 
-minTrade = 50
-maxTrade = 300
-minWaitTimeMS = 500
-maxWaitTimeMS = 1500
-symbol = "SKYM/USDT"
+with open ('parameters.json', 'r') as parameterFile:
+    data=parameterFile.read()
+
+parameters = json.loads(data)
+minTrade = int(parameters['minTrade'])
+maxTrade = int(parameters['maxTrade'])
+minWaitTimeMS = int(parameters['minWaitTimeMS'])
+maxWaitTimeMS = int(parameters['maxWaitTimeMS'])
+symbol = parameters['pair']
 
 tradeNumber = 0
 def sellAndBuyOrders(bids, asks, exchangeAmount):
