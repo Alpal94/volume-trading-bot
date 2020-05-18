@@ -10,17 +10,24 @@ import config
 
 client = ExchangeClient(config.apiid, config.secret)
 
-def sellAndBuyOrders(bids, asks, symbol, amount):
+minTrade = 50
+maxTrade = 300
+minWaitTimeMS = 500
+maxWaitTimeMS = 1500
+symbol = "SKYM/USDT"
+
+tradeNumber = 0
+def sellAndBuyOrders(bids, asks, exchangeAmount):
+    global tradeNumber
     lastPrice = client.market_trades(symbol)['data'][0][1]
     bidPrice = float(bids[0][0])
     askPrice = float(asks[0][0])
-    askPrice = min(float(lastPrice) * 1.49, askPrice)
 
     print("Last price: " + str(lastPrice))
     print("Bid price: " + str(bidPrice))
     print("Ask price: "  + str(askPrice))
 
-
+    askPrice = min(float(lastPrice) * 1.49, askPrice)
     range = 10
     price = round(bidPrice + float(random.randint(1, range-1)) * (askPrice - bidPrice) / float(range), 6)
 
@@ -29,26 +36,32 @@ def sellAndBuyOrders(bids, asks, symbol, amount):
     limitOrder = 1
     print("ORDER: ")
     print(price)
-    amount = 50
-    print( client.order_place(symbol, buy, price, amount, limitOrder, None, None) )
-    print( client.order_place(symbol, sell, price, amount, limitOrder, None, None) )
+    if tradeNumber % 2 is 0:
+        # Sell first then buy
+        print( client.order_place(symbol, sell, price, exchangeAmount, limitOrder, None, None) )
+        print( client.order_place(symbol, buy, price, exchangeAmount, limitOrder, None, None) )
+    else:
+        # Buy first then sell
+        print( client.order_place(symbol, buy, price, exchangeAmount, limitOrder, None, None) )
+        print( client.order_place(symbol, sell, price, exchangeAmount, limitOrder, None, None) )
+
+    tradeNumber = tradeNumber + 1
+
     return False
 
-def successfulTrade(orderbook, symbol, limit):
+def successfulTrade(orderbook):
     bids = orderbook['bids']
     asks = orderbook['asks']
 
-    exchangeAmount = min(random.randint(50, 1000), int(limit))
-    didTrade = sellAndBuyOrders(bids, asks, symbol, exchangeAmount)
+    exchangeAmount = random.randint(minTrade, maxTrade)
+    didTrade = sellAndBuyOrders(bids, asks, exchangeAmount)
 
     return didTrade
 
-def runTrades(symbol, limit):
-    orderBook = client.order_book(symbol, 5)['data']
-    successfulTrade(orderBook, symbol, limit)
+def runTrades():
+    while(True):
+        orderBook = client.order_book(symbol, 5)['data']
+        successfulTrade(orderBook)
+        time.sleep(random.randint(minWaitTimeMS, maxWaitTimeMS) / 1000)
 
-    waitTime = random.randint(1, 3)
-    time.sleep(waitTime)
-
-symbol = "SKYM/USDT"
-runTrades(symbol, 1000)
+runTrades()
