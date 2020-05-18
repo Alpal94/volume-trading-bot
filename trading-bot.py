@@ -11,23 +11,27 @@ import config
 client = ExchangeClient(config.apiid, config.secret)
 
 def sellAndBuyOrders(bids, asks, symbol, amount):
+    lastPrice = client.market_trades(symbol)['data'][0][1]
     bidPrice = float(bids[0][0])
     askPrice = float(asks[0][0])
-    print(bidPrice)
-    print("VS")
-    print(askPrice)
+    askPrice = min(float(lastPrice) * 1.49, askPrice)
 
-    possibleSellPrices = np.linspace(bidPrice+inc, bidPrice+inc+(inc*numBids), numBids, endpoint = False)
+    print("Last price: " + str(lastPrice))
+    print("Bid price: " + str(bidPrice))
+    print("Ask price: "  + str(askPrice))
+
 
     range = 10
-    price = bidPrice + float(random.randint(1, range-1)) * (bidPrice - askPrice) / float(range)
+    price = round(bidPrice + float(random.randint(1, range-1)) * (askPrice - bidPrice) / float(range), 6)
 
     buy = 1
     sell = 2
     limitOrder = 1
-    if client.order_place(symbol, buy, price, amount, limitOrder):
-        if client.order_place(symbol, sell, price, amount, limitOrder):
-            return True
+    print("ORDER: ")
+    print(price)
+    amount = 50
+    print( client.order_place(symbol, buy, price, amount, limitOrder, None, None) )
+    print( client.order_place(symbol, sell, price, amount, limitOrder, None, None) )
     return False
 
 def successfulTrade(orderbook, symbol, limit):
@@ -43,7 +47,7 @@ def runTrades(symbol, limit):
     orderBook = client.order_book(symbol, 5)['data']
     successfulTrade(orderBook, symbol, limit)
 
-    waitTime = random.randint(5, 25)
+    waitTime = random.randint(1, 3)
     time.sleep(waitTime)
 
 symbol = "SKYM/USDT"
