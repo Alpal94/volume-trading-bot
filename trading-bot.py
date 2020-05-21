@@ -3,6 +3,7 @@ import sys
 import random
 import json
 import numpy as np
+import math
 from decimal import Decimal
 
 from exchange.ExchangeClient import ExchangeClient
@@ -16,25 +17,49 @@ minWaitTimeMS = -1
 maxWaitTimeMS = -1
 pair = "SKYM/USDT"
 
+upwardDownward = 1
+tradeNumber = 0
 
 def updateParameters():
     global minTrade
     global maxTrade
     global minWaitTimeMS
     global maxWaitTimeMS
+    global deleteOrders
+    global active
 
-    with open ('parameters.json', 'r') as parameterFile:
-        data=parameterFile.read()
+    parameterFile = open ('parameters.json', 'r')
+    data=parameterFile.read()
 
+    #Get parameters
     parameters = json.loads(data)
     minTrade = int(parameters['minTrade'])
     maxTrade = int(parameters['maxTrade'])
     minWaitTimeMS = int(parameters['minWaitTimeMS'])
     maxWaitTimeMS = int(parameters['maxWaitTimeMS'])
+    deleteOrders = parameters['delete']
+    active = parameters['active']
 
-tradeNumber = 0
+    #Update parameters
+    parameters['delete'] = "off"
+
+    if tradeNumber % 20 == 0:
+        USDT = client.account_one("USDT")
+        SKYM = client.account_one("SKYM")
+        parameters['USDT'] = USDT['data']['totalBalance']
+        parameters['SKYM'] = SKYM['data']['totalBalance']
+
+
+    parameterFile.close()
+    parameterFile = open ('parameters.json', 'w')
+    parameterFile.write(json.dumps(parameters))
+    parameterFile.close()
+
+
+
 def sellAndBuyOrders(bids, asks, exchangeAmount):
     global tradeNumber
+    global upwardDownward
     lastPrice = client.market_trades(pair)['data'][0][1]
     bidPrice = float(bids[0][0])
     askPrice = float(asks[0][0])
@@ -46,23 +71,19 @@ def sellAndBuyOrders(bids, asks, exchangeAmount):
     askPrice = min(float(lastPrice) * 1.49, askPrice)
 
     range = 10
-    upwardsScale = 1.01
-    downwardsScale = 0.99
-    if float(lastPrice) * upwardsScale < askPrice and float(lastPrice) * upwardsScale > bidPrice:
-        print("Using adjusted price (upward)")
-        price = float(lastPrice) * upwardsScale
-    elif float(lastPrice) * downwardsScale > bidPrice and float(lastPrice) * downwardsScale < askPrice:
-        print("Using adjusted price (downward)")
-        price = float(lastPrice) * downwardsScale
-    else:
-        price = round(bidPrice + float(random.randint(1, range-1)) * (askPrice - bidPrice) / float(range), 6)
+    
+
+    priceDiff = askPrice-bidPrice
+    amplitude = priceDiff
+    price = bidPrice + priceDiff/2 + (0.90*amplitude/2) * math.sin(300 + tradeNumber / 200)
 
     price = round(price, 6)
     buy = 1
     sell = 2
     limitOrder = 1
     print("ORDER: ")
-    print(price)
+    print("Price: " + str(price))
+    print("Exchange amount: " + str(exchangeAmount))
     # Sell first then buy
     print( client.order_place(pair, sell, price, exchangeAmount, limitOrder, None, None) )
     print( client.order_place(pair, buy, price, exchangeAmount, limitOrder, None, None) )
@@ -75,21 +96,15 @@ def successfulTrade(orderbook):
     bids = orderbook['bids']
     asks = orderbook['asks']
 
-    exchangeAmount = random.randint(minTrade, maxTrade)
+    amountDiff = maxTrade-minTrade
+    amplitude = amountDiff
+    period = 1000
+    exchangeAmount = round(amountDiff + amountDiff/2 + (amplitude/2) * math.sin(1.5*period + tradeNumber / period), 2)
     didTrade = sellAndBuyOrders(bids, asks, exchangeAmount)
 
     return didTrade
 
-def runTrades():
-    while(True):
-        updateParameters()
-        orderBook = client.order_book(pair, 5)['data']
-        successfulTrade(orderBook)
-        time.sleep(random.randint(minWaitTimeMS, maxWaitTimeMS) / 1000)
-
-runTrades()
-def closeBotsOrders():
-    botsOpenOrders = client.open_orders(None, None)['data']
+def closeTenOrders(botsOpenOrders):
     orderIds = []
     for i in range(len(botsOpenOrders)):
         orderIds.append(botsOpenOrders[i]['orderId'])
@@ -97,4 +112,27 @@ def closeBotsOrders():
             print(client.batch_cancel(orderIds))
             orderIds = []
 
-#closeBotsOrders()
+def closeBotsOrders():
+    botsOpenOrders = client.open_orders(None, None)['data']
+    closeTenOrders(botsOpenOrders)
+
+    botsOpenOrders = client.open_orders(None, None)['data']
+    while len(botsOpenOrders) > 5:
+        closeTenOrders(botsOpenOrders)
+        botsOpenOrders = client.open_orders(None, None)['data']
+
+def runTrades():
+    while(True):
+        updateParameters()
+
+        if deleteOrders == "on":
+            closeBotsOrders()
+        if active == "on":
+            orderBook = client.order_book(pair, 5)['data']
+            successfulTrade(orderBook)
+            time.sleep(random.randint(minWaitTimeMS, maxWaitTimeMS) / 1000)
+        else:
+            time.sleep()
+
+
+runTrades()
