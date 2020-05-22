@@ -28,7 +28,7 @@ def updateParameters():
     global deleteOrders
     global active
 
-    parameterFile = open ('parameters.json', 'r')
+    parameterFile = open ('/var/www/volume-trading-bot/parameters.json', 'r')
     data=parameterFile.read()
 
     #Get parameters
@@ -51,7 +51,7 @@ def updateParameters():
 
 
     parameterFile.close()
-    parameterFile = open ('parameters.json', 'w')
+    parameterFile = open ('/var/www/volume-trading-bot/parameters.json', 'w')
     parameterFile.write(json.dumps(parameters))
     parameterFile.close()
 
@@ -70,14 +70,18 @@ def sellAndBuyOrders(bids, asks, exchangeAmount):
 
     askPrice = min(float(lastPrice) * 1.49, askPrice)
 
-    range = 10
-    
-
     priceDiff = askPrice-bidPrice
     amplitude = priceDiff
+    if priceDiff < 0.0003:
+        print("Price diff too small.  Exiting.")
+        return False
     price = bidPrice + priceDiff/2 + (0.90*amplitude/2) * math.sin(300 + tradeNumber / 200)
-
     price = round(price, 6)
+    if priceDiff < 0.001:
+        print("Turning to random due to price difference")
+        range = 100000
+        price = round(bidPrice + float(random.randint(1000, range-1000)) * (askPrice - bidPrice) / float(range), 6)
+
     buy = 1
     sell = 2
     limitOrder = 1
@@ -125,14 +129,18 @@ def runTrades():
     while(True):
         updateParameters()
 
+        print(time.asctime( time.localtime(time.time()) ))
         if deleteOrders == "on":
+            print("Delete orders")
             closeBotsOrders()
         if active == "on":
+            print("Execute trades")
             orderBook = client.order_book(pair, 5)['data']
             successfulTrade(orderBook)
             time.sleep(random.randint(minWaitTimeMS, maxWaitTimeMS) / 1000)
         else:
-            time.sleep()
+            print("Hibernating")
+            time.sleep(1)
 
 
 runTrades()
