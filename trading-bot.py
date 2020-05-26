@@ -4,6 +4,7 @@ import random
 import json
 import numpy as np
 import math
+import threading
 from decimal import Decimal
 
 from exchange.ExchangeClient import ExchangeClient
@@ -55,7 +56,13 @@ def updateParameters():
     parameterFile.write(json.dumps(parameters))
     parameterFile.close()
 
-
+def order(pair, direction, price, exchangeAmount, limitOrder):
+    try:
+        thread = threading.Thread( target=client.order_place, args=(pair, direction, price, exchangeAmount, limitOrder, None, None) )
+        thread.start()
+    except:
+        print("Error: Unable to start thread")
+    
 
 def sellAndBuyOrders(bids, asks, exchangeAmount):
     global tradeNumber
@@ -89,8 +96,8 @@ def sellAndBuyOrders(bids, asks, exchangeAmount):
     print("Price: " + str(price))
     print("Exchange amount: " + str(exchangeAmount))
     # Sell first then buy
-    print( client.order_place(pair, sell, price, exchangeAmount, limitOrder, None, None) )
-    print( client.order_place(pair, buy, price, exchangeAmount, limitOrder, None, None) )
+    order(pair, sell, price, exchangeAmount, limitOrder)
+    order(pair, buy, price, exchangeAmount, limitOrder)
 
     tradeNumber = tradeNumber + 1
 
