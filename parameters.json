@@ -1,1 +1,1 @@
-{"minTrade": "50", "maxTrade": "100", "minWaitTimeMS": "0", "maxWaitTimeMS": "0", "active": "on", "delete": "off", "USDT": "50.01339938", "SKYM": "39431.36000000"}
+{"minTrade": "50", "maxTrade": "60", "minWaitTimeMS": "1", "maxWaitTimeMS": "10", "active": "on", "delete": "off", "USDT": "8.71794830", "SKYM": "10587.17000000"}

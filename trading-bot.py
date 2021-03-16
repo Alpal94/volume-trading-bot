@@ -21,6 +21,21 @@ pair = "SKYM/USDT"
 upwardDownward = 1
 tradeNumber = 0
 
+def defaultParameters():
+    global minTrade
+    global maxTrade
+    global minWaitTimeMS
+    global maxWaitTimeMS
+    global deleteOrders
+    global active
+    
+    minTrade = 50
+    maxTrade = 1000
+    minWaitTimeMS = 0
+    maxWaitTimeMS = 0
+    deleteOrders = "off"
+    active = "on"
+
 def updateParameters():
     global minTrade
     global maxTrade
@@ -52,9 +67,10 @@ def updateParameters():
 
 
     parameterFile.close()
-    parameterFile = open ('/var/www/volume-trading-bot/parameters.json', 'w')
-    parameterFile.write(json.dumps(parameters))
-    parameterFile.close()
+    if deleteOrders == "on" or tradeNumber % 20 == 0:
+        parameterFile = open ('/var/www/volume-trading-bot/parameters.json', 'w')
+        parameterFile.write(json.dumps(parameters))
+        parameterFile.close()
 
 def order(pair, direction, price, exchangeAmount, limitOrder):
     try:
@@ -79,12 +95,12 @@ def sellAndBuyOrders(bids, asks, exchangeAmount):
 
     priceDiff = askPrice-bidPrice
     amplitude = priceDiff
-    if priceDiff < 0.0003:
+    if priceDiff < 0.000004:
         print("Price diff too small.  Exiting.")
         return False
     price = bidPrice + priceDiff/2 + (0.90*amplitude/2) * math.sin(300 + tradeNumber / 200)
     price = round(price, 6)
-    if priceDiff < 0.001:
+    if priceDiff < 0.00001:
         print("Turning to random due to price difference")
         range = 100000
         price = round(bidPrice + float(random.randint(1000, range-1000)) * (askPrice - bidPrice) / float(range), 6)
@@ -110,7 +126,7 @@ def successfulTrade(orderbook):
     amountDiff = maxTrade-minTrade
     amplitude = amountDiff
     period = 1000
-    exchangeAmount = round(amountDiff + amountDiff/2 + (amplitude/2) * math.sin(1.5*period + tradeNumber / period), 2)
+    exchangeAmount = round(minTrade + amountDiff/2 + (amplitude/2) * math.sin(1.5*period + tradeNumber / period), 2)
     didTrade = sellAndBuyOrders(bids, asks, exchangeAmount)
 
     return didTrade
@@ -123,24 +139,28 @@ def closeTenOrders(botsOpenOrders):
             print(client.batch_cancel(orderIds))
             orderIds = []
 
+    if(len(orderIds)):
+        print(client.batch_cancel(orderIds))
+
 def closeBotsOrders():
-    botsOpenOrders = client.open_orders(None, None)['data']
+    botsOpenOrders = client.open_orders(pair, None)['data']
     closeTenOrders(botsOpenOrders)
 
-    botsOpenOrders = client.open_orders(None, None)['data']
+    botsOpenOrders = client.open_orders(pair, None)['data']
     while len(botsOpenOrders) > 5:
         closeTenOrders(botsOpenOrders)
-        botsOpenOrders = client.open_orders(None, None)['data']
+        botsOpenOrders = client.open_orders(pair, None)['data']
 
 def runTrades():
     while(True):
+        #defaultParameters()
         updateParameters()
 
         print(time.asctime( time.localtime(time.time()) ))
         if deleteOrders == "on":
             print("Delete orders")
             closeBotsOrders()
-        if active == "on":
+        if active != "off":
             print("Execute trades")
             orderBook = client.order_book(pair, 5)['data']
             successfulTrade(orderBook)
